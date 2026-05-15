@@ -9,7 +9,7 @@ body{margin:0;font-family:system-ui;background:#0f172a;color:#e5e7eb}
 .wrap{max-width:1350px;margin:24px auto;padding:0 16px}
 h1{margin:0 0 10px}
 p{color:#94a3b8}
-.layout{display:grid;grid-template-columns:360px 1fr;gap:16px}
+.layout{display:grid;grid-template-columns:380px 1fr;gap:16px}
 .card{background:#111827;border:1px solid #334155;border-radius:16px;padding:16px}
 .controls{display:grid;gap:10px}
 label{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -20,33 +20,77 @@ button.primary{background:#15803d;border-color:#15803d}
 .stat{margin-top:10px;padding:10px;border:1px solid #334155;border-radius:10px;background:#020617}
 canvas{width:100%;height:auto;background:white;border-radius:12px}
 .sw{display:inline-block;width:14px;height:14px;border-radius:4px;margin-right:6px}
+.small{font-size:.9rem;color:#94a3b8;margin:0}
 @media(max-width:900px){.layout{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="wrap">
 <h1>Paletten-Stapel-Optimierer</h1>
-<p>Jetzt mit allen vier Formen aus dem Foto: großer Rechteckstein, Quadratstein, keilförmiger Stein und schmaler Rechteckstein. Die Keilform wird beim Packen als Raster-Footprint behandelt, aber optisch als Keil gezeichnet.</p>
+<p>Mit einstellbarer Rastergröße, ein-/ausschaltbaren Formen und gewünschtem Prozentanteil pro Steinform.</p>
 
 <div class="layout">
 <div class="card">
 <div class="controls">
-<label>Rasterbreite: <input id="gridW" type="number" min="1" max="100" value="22"></label>
-<label>Rasterhöhe: <input id="gridH" type="number" min="1" max="100" value="14"></label>
+
+<label>Rasterbreite:
+<input id="gridW" type="number" min="1" max="100" value="22">
+</label>
+
+<label>Rasterhöhe:
+<input id="gridH" type="number" min="1" max="100" value="14">
+</label>
+
 <button id="applyGrid">Raster anwenden</button>
 
-<label><input type="checkbox" id="shapeA" checked> Großer Rechteckstein 3×2</label>
-<label><input type="checkbox" id="shapeB" checked> Quadratstein 2×2</label>
-<label><input type="checkbox" id="shapeC" checked> Keilstein 2×2</label>
-<label><input type="checkbox" id="shapeD" checked> Schmaler Rechteckstein 1×2</label>
+<hr style="width:100%;border:0;border-top:1px solid #334155">
 
-<label>Zufallsversuche: <input id="tries" type="number" min="50" max="10000" step="50" value="1200"></label>
+<label>
+<input type="checkbox" id="shapeA" checked>
+Großer Rechteckstein 3×2
+</label>
+<label>Prozent 3×2:
+<input id="pctA" type="number" min="0" max="100" value="35">
+</label>
+
+<label>
+<input type="checkbox" id="shapeB" checked>
+Quadratstein 2×2
+</label>
+<label>Prozent 2×2:
+<input id="pctB" type="number" min="0" max="100" value="25">
+</label>
+
+<label>
+<input type="checkbox" id="shapeC" checked>
+Keilstein 2×2
+</label>
+<label>Prozent Keil:
+<input id="pctC" type="number" min="0" max="100" value="20">
+</label>
+
+<label>
+<input type="checkbox" id="shapeD" checked>
+Schmaler Rechteckstein 1×2
+</label>
+<label>Prozent 1×2:
+<input id="pctD" type="number" min="0" max="100" value="20">
+</label>
+
+<p class="small">Die Prozentwerte werden als Gewichtung benutzt. Sie müssen nicht exakt 100 ergeben.</p>
+
+<hr style="width:100%;border:0;border-top:1px solid #334155">
+
+<label>Zufallsversuche:
+<input id="tries" type="number" min="50" max="10000" step="50" value="1200">
+</label>
 
 <div class="row">
 <button class="primary" id="optimizeBtn">Optimieren</button>
 <button id="clearBtn">Leeren</button>
 <button id="downloadBtn">PNG speichern</button>
 </div>
+
 </div>
 
 <div class="stat" id="stats">Noch keine Optimierung durchgeführt.</div>
@@ -86,6 +130,28 @@ function enabledShapes(){
   return SHAPES.filter(s => document.getElementById('shape'+s.id).checked);
 }
 
+function getShapeWeights(){
+  const values = {
+    A: Math.max(0, Number(document.getElementById('pctA').value || 0)),
+    B: Math.max(0, Number(document.getElementById('pctB').value || 0)),
+    C: Math.max(0, Number(document.getElementById('pctC').value || 0)),
+    D: Math.max(0, Number(document.getElementById('pctD').value || 0))
+  };
+
+  let total = values.A + values.B + values.C + values.D;
+
+  if(total <= 0){
+    return {A:1,B:1,C:1,D:1};
+  }
+
+  return {
+    A: values.A / total,
+    B: values.B / total,
+    C: values.C / total,
+    D: values.D / total
+  };
+}
+
 function orientations(shape){
   const [w,h] = shape.base;
   if(w === h) return [[w,h,0]];
@@ -107,7 +173,7 @@ function canPlace(grid,x,y,w,h){
 }
 
 function place(grid,x,y,w,h,shape,rot){
-  const id = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+  const id = Math.random().toString(36).slice(2);
   for(let yy=y; yy<y+h; yy++){
     for(let xx=x; xx<x+w; xx++){
       grid[yy][xx] = id;
@@ -124,79 +190,152 @@ function shuffle(a){
   return a;
 }
 
+function weightedPick(candidates, weights){
+  let sum = 0;
+  for(const c of candidates){
+    sum += weights[c.s.id] || 0;
+  }
+
+  if(sum <= 0){
+    return candidates[Math.floor(Math.random()*candidates.length)];
+  }
+
+  let r = Math.random() * sum;
+
+  for(const c of candidates){
+    r -= weights[c.s.id] || 0;
+    if(r <= 0) return c;
+  }
+
+  return candidates[candidates.length - 1];
+}
+
 function randomFill(){
   const shapes = enabledShapes();
+  const weights = getShapeWeights();
+
   if(!shapes.length) return null;
 
   const grid = newGrid();
   const placements = [];
   const cells = [];
-  for(let y=0;y<GRID_H;y++) for(let x=0;x<GRID_W;x++) cells.push([x,y]);
+
+  for(let y=0;y<GRID_H;y++){
+    for(let x=0;x<GRID_W;x++){
+      cells.push([x,y]);
+    }
+  }
+
   shuffle(cells);
 
   for(const [x,y] of cells){
     if(grid[y][x]) continue;
+
     const candidates = [];
+
     for(const s of shapes){
       for(const [w,h,rot] of orientations(s)){
-        if(canPlace(grid,x,y,w,h)) candidates.push({s,w,h,rot});
+        if(canPlace(grid,x,y,w,h)){
+          candidates.push({s,w,h,rot});
+        }
       }
     }
+
     if(!candidates.length) continue;
 
     candidates.sort((a,b)=>(b.w*b.h)-(a.w*a.h));
-    const pick = candidates[Math.floor(Math.random()*Math.min(3,candidates.length))];
+
+    const top = candidates.slice(0, Math.min(8, candidates.length));
+    const pick = weightedPick(top, weights);
+
     placements.push(place(grid,x,y,pick.w,pick.h,pick.s,pick.rot));
   }
+
   return {grid,placements};
 }
 
 function scoreSolution(sol){
   if(!sol) return -Infinity;
-  const total = GRID_W*GRID_H;
-  const filled = sol.placements.reduce((a,p)=>a+p.area,0);
-  const fill = filled/total;
 
-  let asymX=0, asymY=0;
+  const total = GRID_W * GRID_H;
+  const filled = sol.placements.reduce((a,p)=>a+p.area,0);
+  const fill = filled / total;
+
+  let asymX = 0;
+  let asymY = 0;
+
   for(let y=0;y<GRID_H;y++){
     for(let x=0;x<GRID_W;x++){
       const a = sol.grid[y][x] ? 1 : 0;
       const mx = sol.grid[y][GRID_W-1-x] ? 1 : 0;
       const my = sol.grid[GRID_H-1-y][x] ? 1 : 0;
-      if(a!==mx) asymX++;
-      if(a!==my) asymY++;
+
+      if(a !== mx) asymX++;
+      if(a !== my) asymY++;
     }
   }
-  const asym = (asymX+asymY)/(2*total);
 
-  let support=0;
+  const asym = (asymX + asymY) / (2 * total);
+
+  let support = 0;
+
   for(let y=1;y<GRID_H;y++){
     for(let x=0;x<GRID_W;x++){
-      if(sol.grid[y][x] && sol.grid[y-1][x]) support++;
+      if(sol.grid[y][x] && sol.grid[y-1][x]){
+        support++;
+      }
     }
   }
 
-  let emptyRuns=0;
+  let emptyRuns = 0;
+
   for(let y=0;y<GRID_H;y++){
-    let run=0;
+    let run = 0;
     for(let x=0;x<GRID_W;x++){
-      if(!sol.grid[y][x]) run++;
-      else{ if(run>2) emptyRuns+=run; run=0; }
+      if(!sol.grid[y][x]){
+        run++;
+      }else{
+        if(run > 2) emptyRuns += run;
+        run = 0;
+      }
     }
-    if(run>2) emptyRuns+=run;
+    if(run > 2) emptyRuns += run;
   }
 
-  return fill*12000 + asym*900 + support*2 - emptyRuns*4 + sol.placements.length*0.05;
+  const desired = getShapeWeights();
+  const actualCells = {A:0,B:0,C:0,D:0};
+
+  for(const p of sol.placements){
+    actualCells[p.shape] += p.area;
+  }
+
+  let mixPenalty = 0;
+
+  if(filled > 0){
+    for(const id of ['A','B','C','D']){
+      const actual = actualCells[id] / filled;
+      const target = desired[id] || 0;
+      mixPenalty += Math.abs(actual - target);
+    }
+  }
+
+  return fill*12000 + asym*900 + support*2 - emptyRuns*4 - mixPenalty*900 + sol.placements.length*0.05;
 }
 
 function optimize(){
   const tries = Math.max(1,parseInt(document.getElementById('tries').value || '1200',10));
-  let best=null, bestScore=-Infinity;
+
+  let best = null;
+  let bestScore = -Infinity;
 
   for(let i=0;i<tries;i++){
     const sol = randomFill();
     const sc = scoreSolution(sol);
-    if(sc>bestScore){ bestScore=sc; best=sol; }
+
+    if(sc > bestScore){
+      bestScore = sc;
+      best = sol;
+    }
   }
 
   bestSolution = best;
@@ -205,40 +344,64 @@ function optimize(){
 }
 
 function stats(sol,score){
-  const el=document.getElementById('stats');
-  if(!sol){el.textContent='Keine Lösung möglich.';return;}
-  const total=GRID_W*GRID_H;
-  const filled=sol.placements.reduce((a,p)=>a+p.area,0);
-  const c={A:0,B:0,C:0,D:0};
-  sol.placements.forEach(p=>c[p.shape]++);
+  const el = document.getElementById('stats');
+
+  if(!sol){
+    el.textContent = 'Keine Lösung möglich.';
+    return;
+  }
+
+  const total = GRID_W * GRID_H;
+  const filled = sol.placements.reduce((a,p)=>a+p.area,0);
+  const c = {A:0,B:0,C:0,D:0};
+  const cells = {A:0,B:0,C:0,D:0};
+
+  sol.placements.forEach(p=>{
+    c[p.shape]++;
+    cells[p.shape] += p.area;
+  });
+
+  function pct(id){
+    if(filled <= 0) return '0.0';
+    return ((cells[id] / filled) * 100).toFixed(1);
+  }
+
   el.innerHTML =
     `<b>Score:</b> ${score.toFixed(1)}<br>`+
     `<b>Raster:</b> ${GRID_W} × ${GRID_H}<br>`+
     `<b>Belegung:</b> ${filled} / ${total} (${(filled/total*100).toFixed(2)}%)<br>`+
-    `<b>Steine:</b> ${sol.placements.length}<br>`+
-    `<b>Groß 3×2:</b> ${c.A}, <b>Quadrat 2×2:</b> ${c.B}, `+
-    `<b>Keil 2×2:</b> ${c.C}, <b>Schmal 1×2:</b> ${c.D}`;
+    `<b>Steine:</b> ${sol.placements.length}<br><br>`+
+    `<b>Groß 3×2:</b> ${c.A} Stück, ${pct('A')}% Fläche<br>`+
+    `<b>Quadrat 2×2:</b> ${c.B} Stück, ${pct('B')}% Fläche<br>`+
+    `<b>Keil 2×2:</b> ${c.C} Stück, ${pct('C')}% Fläche<br>`+
+    `<b>Schmal 1×2:</b> ${c.D} Stück, ${pct('D')}% Fläche`;
 }
 
 function drawPiece(p){
-  const x=PAD+p.x*CELL, y=PAD+p.y*CELL, w=p.w*CELL, h=p.h*CELL;
-  ctx.fillStyle=p.color;
-  ctx.strokeStyle='#111827';
-  ctx.lineWidth=2;
+  const x = PAD + p.x * CELL;
+  const y = PAD + p.y * CELL;
+  const w = p.w * CELL;
+  const h = p.h * CELL;
+
+  ctx.fillStyle = p.color;
+  ctx.strokeStyle = '#111827';
+  ctx.lineWidth = 2;
 
   if(p.draw === 'wedge'){
     ctx.beginPath();
-    if(p.rot===90){
-      ctx.moveTo(x+CELL*0.25,y+2);
-      ctx.lineTo(x+w-2,y+2);
-      ctx.lineTo(x+w-CELL*0.25,y+h-2);
-      ctx.lineTo(x+2,y+h-2);
+
+    if(p.rot === 90){
+      ctx.moveTo(x + CELL*0.25, y + 2);
+      ctx.lineTo(x + w - 2, y + 2);
+      ctx.lineTo(x + w - CELL*0.25, y + h - 2);
+      ctx.lineTo(x + 2, y + h - 2);
     }else{
-      ctx.moveTo(x+CELL*0.25,y+2);
-      ctx.lineTo(x+w-CELL*0.25,y+2);
-      ctx.lineTo(x+w-2,y+h-2);
-      ctx.lineTo(x+2,y+h-2);
+      ctx.moveTo(x + CELL*0.25, y + 2);
+      ctx.lineTo(x + w - CELL*0.25, y + 2);
+      ctx.lineTo(x + w - 2, y + h - 2);
+      ctx.lineTo(x + 2, y + h - 2);
     }
+
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
@@ -249,60 +412,73 @@ function drawPiece(p){
 }
 
 function draw(){
-  canvas.width = GRID_W*CELL+PAD*2;
-  canvas.height = GRID_H*CELL+PAD*2;
-  ctx.fillStyle='#fff';
+  canvas.width = GRID_W * CELL + PAD * 2;
+  canvas.height = GRID_H * CELL + PAD * 2;
+
+  ctx.fillStyle = '#fff';
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  ctx.strokeStyle='#d1d5db';
-  ctx.lineWidth=1;
+  ctx.strokeStyle = '#d1d5db';
+  ctx.lineWidth = 1;
+
   for(let x=0;x<=GRID_W;x++){
     ctx.beginPath();
-    ctx.moveTo(PAD+x*CELL,PAD);
-    ctx.lineTo(PAD+x*CELL,PAD+GRID_H*CELL);
+    ctx.moveTo(PAD + x*CELL, PAD);
+    ctx.lineTo(PAD + x*CELL, PAD + GRID_H*CELL);
     ctx.stroke();
   }
+
   for(let y=0;y<=GRID_H;y++){
     ctx.beginPath();
-    ctx.moveTo(PAD,PAD+y*CELL);
-    ctx.lineTo(PAD+GRID_W*CELL,PAD+y*CELL);
+    ctx.moveTo(PAD, PAD + y*CELL);
+    ctx.lineTo(PAD + GRID_W*CELL, PAD + y*CELL);
     ctx.stroke();
   }
 
-  if(bestSolution) bestSolution.placements.forEach(drawPiece);
+  if(bestSolution){
+    bestSolution.placements.forEach(drawPiece);
+  }
 
   ctx.save();
-  ctx.strokeStyle='rgba(239,68,68,.65)';
+  ctx.strokeStyle = 'rgba(239,68,68,.65)';
   ctx.setLineDash([6,6]);
+
   ctx.beginPath();
-  ctx.moveTo(PAD+GRID_W*CELL/2,PAD);
-  ctx.lineTo(PAD+GRID_W*CELL/2,PAD+GRID_H*CELL);
+  ctx.moveTo(PAD + GRID_W*CELL/2, PAD);
+  ctx.lineTo(PAD + GRID_W*CELL/2, PAD + GRID_H*CELL);
   ctx.stroke();
+
   ctx.beginPath();
-  ctx.moveTo(PAD,PAD+GRID_H*CELL/2);
-  ctx.lineTo(PAD+GRID_W*CELL,PAD+GRID_H*CELL/2);
+  ctx.moveTo(PAD, PAD + GRID_H*CELL/2);
+  ctx.lineTo(PAD + GRID_W*CELL, PAD + GRID_H*CELL/2);
   ctx.stroke();
+
   ctx.restore();
 }
 
 document.getElementById('applyGrid').onclick = () => {
-  GRID_W = Math.max(1,Math.min(100,parseInt(document.getElementById('gridW').value||'22',10)));
-  GRID_H = Math.max(1,Math.min(100,parseInt(document.getElementById('gridH').value||'14',10)));
-  bestSolution=null;
+  GRID_W = Math.max(1,Math.min(100,parseInt(document.getElementById('gridW').value || '22',10)));
+  GRID_H = Math.max(1,Math.min(100,parseInt(document.getElementById('gridH').value || '14',10)));
+
+  bestSolution = null;
   draw();
-  document.getElementById('stats').textContent=`Raster auf ${GRID_W} × ${GRID_H} gesetzt.`;
+
+  document.getElementById('stats').textContent =
+    `Raster auf ${GRID_W} × ${GRID_H} gesetzt.`;
 };
 
 document.getElementById('optimizeBtn').onclick = optimize;
+
 document.getElementById('clearBtn').onclick = () => {
-  bestSolution=null;
+  bestSolution = null;
   draw();
-  document.getElementById('stats').textContent='Raster geleert.';
+  document.getElementById('stats').textContent = 'Raster geleert.';
 };
+
 document.getElementById('downloadBtn').onclick = () => {
-  const a=document.createElement('a');
-  a.download='paletten-stapel.png';
-  a.href=canvas.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.download = 'paletten-stapel.png';
+  a.href = canvas.toDataURL('image/png');
   a.click();
 };
 
