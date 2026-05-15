@@ -5,96 +5,566 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Paletten-Stapel-Optimierer 14×22</title>
 <style>
-  :root{--bg:#0f172a;--panel:#111827;--ink:#e5e7eb;--muted:#9ca3af;--grid:#334155;--good:#22c55e;--warn:#f59e0b;--bad:#ef4444;--a:#38bdf8;--b:#a78bfa;--c:#fb7185;}
-  *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(135deg,#0f172a,#111827 45%,#020617);color:var(--ink)}
-  header{padding:22px clamp(16px,4vw,44px);border-bottom:1px solid #263244;background:rgba(2,6,23,.45);backdrop-filter:blur(8px)}
-  h1{margin:0 0 6px;font-size:clamp(22px,3vw,34px)} p{margin:0;color:var(--muted);line-height:1.45}.wrap{display:grid;grid-template-columns:380px 1fr;gap:18px;padding:18px clamp(12px,3vw,32px)}
-  @media(max-width:980px){.wrap{grid-template-columns:1fr}.boards{grid-template-columns:1fr!important}}
-  .card{background:rgba(17,24,39,.82);border:1px solid #263244;border-radius:18px;padding:16px;box-shadow:0 16px 50px rgba(0,0,0,.25)}
-  .controls{display:grid;gap:14px;align-content:start}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.shape{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:10px;border:1px solid #334155;border-radius:12px;background:#0b1220}.chip{width:22px;height:22px;border-radius:6px}.chip.a{background:var(--a)}.chip.b{background:var(--b)}.chip.c{background:var(--c)}
-  label{color:#d1d5db;font-weight:650}.small{font-size:12px;color:var(--muted)} input[type=number],select{background:#020617;color:var(--ink);border:1px solid #334155;border-radius:10px;padding:8px 10px;width:92px}input[type=checkbox]{width:18px;height:18px;accent-color:#22c55e}
-  button{border:0;border-radius:12px;padding:10px 13px;font-weight:800;cursor:pointer;color:#07111f;background:#e5e7eb}button.primary{background:#22c55e}button.secondary{background:#38bdf8}button.warn{background:#f59e0b}button:disabled{opacity:.55;cursor:not-allowed}.statgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.stat{padding:10px;border:1px solid #334155;border-radius:12px;background:#07101d}.stat b{display:block;font-size:22px}.stat span{font-size:12px;color:var(--muted)}
-  .boards{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}.boardTitle{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:10px}.boardTitle h2{font-size:18px;margin:0}.score{font-variant-numeric:tabular-nums;color:#bbf7d0}.grid{display:grid;grid-template-columns:repeat(22,1fr);gap:2px;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:6px;max-width:100%;aspect-ratio:22/14}.cell{position:relative;border-radius:4px;background:#020617;min-width:8px}.cell.fill{box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}.cell.a{background:var(--a)}.cell.b{background:var(--b)}.cell.c{background:var(--c)}.cell::after{content:attr(data-id);position:absolute;inset:0;display:grid;place-items:center;font-size:9px;color:rgba(0,0,0,.75);font-weight:900}.cell.empty::after{content:''}.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}.legend span{display:inline-flex;gap:6px;align-items:center;color:var(--muted);font-size:13px}.bar{height:10px;border-radius:999px;background:#1f2937;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e);width:0%}.log{max-height:170px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#cbd5e1;background:#020617;border:1px solid #334155;border-radius:12px;padding:10px;white-space:pre-wrap}.hint{border-left:4px solid #38bdf8;padding:10px 12px;background:#07101d;border-radius:10px;color:#cbd5e1}.metric{display:grid;gap:7px}.metric .top{display:flex;justify-content:space-between;color:#d1d5db;font-size:13px}
+  :root{
+    --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb;
+    --line:#334155; --accent:#22c55e; --danger:#ef4444;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,sans-serif;
+    background:var(--bg); color:var(--text);
+  }
+  .wrap{max-width:1400px; margin:24px auto; padding:0 16px}
+  h1{margin:0 0 12px; font-size:clamp(1.4rem,2.5vw,2.2rem)}
+  p{color:var(--muted)}
+  .grid{
+    display:grid; grid-template-columns: 360px 1fr; gap:16px;
+  }
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px;
+    padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25);
+  }
+  .controls{
+    display:grid; gap:10px;
+  }
+  label{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  input[type="number"]{
+    width:90px; padding:6px 8px; border-radius:8px;
+    border:1px solid var(--line); background:#0b1220; color:var(--text);
+  }
+  input[type="checkbox"]{transform:scale(1.15)}
+  button{
+    padding:10px 14px; border-radius:10px; border:1px solid var(--line);
+    background:#0b1220; color:var(--text); cursor:pointer;
+  }
+  button.primary{
+    background:linear-gradient(180deg,#16a34a,#15803d);
+    border-color:#15803d;
+  }
+  button:hover{filter:brightness(1.05)}
+  .row{display:flex; gap:8px; flex-wrap:wrap}
+  .stat{
+    padding:10px; border:1px solid var(--line); border-radius:10px;
+    background:#0b1220; margin-top:8px; font-size:.95rem;
+  }
+  canvas{
+    width:100%; height:auto; background:#ffffff; border-radius:12px;
+    border:1px solid var(--line);
+  }
+  .legend{
+    display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; font-size:.9rem;
+  }
+  .sw{
+    display:inline-block; width:14px; height:14px; border-radius:4px;
+    margin-right:6px; vertical-align:middle;
+  }
+  @media (max-width: 980px){
+    .grid{grid-template-columns:1fr}
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>Paletten-Stapel-Optimierer 14×22</h1>
-  <p>Ein HTML-Webtool für 2×1, 2×2 und 3×2 Formen mit Rotation, asymmetrischer Grundlage und gespiegelter Gegenlage.</p>
-</header>
-<main class="wrap">
-  <section class="controls card">
-    <h2 style="margin:0">Einstellungen</h2>
-    <div class="shape"><span class="chip a"></span><label><input id="useA" type="checkbox" checked> Form A: 2×1</label><span class="small">rotierbar</span></div>
-    <div class="shape"><span class="chip b"></span><label><input id="useB" type="checkbox" checked> Form B: 2×2</label><span class="small">rotierbar</span></div>
-    <div class="shape"><span class="chip c"></span><label><input id="useC" type="checkbox" checked> Form C: 3×2</label><span class="small">2×3 / 3×2</span></div>
-    <div class="row">
-      <label for="runs">Suchläufe</label><input id="runs" type="number" min="50" max="20000" value="1800" step="50">
-      <label for="seed">Seed</label><input id="seed" type="number" value="42">
+<div class="wrap">
+  <h1>Paletten-Stapel-Optimierer</h1>
+  <p>
+    Optimiert eine möglichst dichte und stabile Belegung eines frei wählbaren Rasters
+    mit asymmetrischer Anordnung, damit das Muster auf beiden Achsen gespiegelt und
+    anschließend stabil gestapelt werden kann.
+  </p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="controls">
+        <label>Rasterbreite:
+          <input id="gridW" type="number" min="1" max="100" value="22" style="width:70px">
+        </label>
+
+        <label>Rasterhöhe:
+          <input id="gridH" type="number" min="1" max="100" value="14" style="width:70px">
+        </label>
+
+        <button id="applyGrid">Raster anwenden</button>
+
+        <label>
+          <input type="checkbox" id="shapeA" checked>
+          Form A (2×1)
+        </label>
+
+        <label>
+          <input type="checkbox" id="shapeB" checked>
+          Form B (2×2)
+        </label>
+
+        <label>
+          <input type="checkbox" id="shapeC" checked>
+          Form C (3×2)
+        </label>
+
+        <label>
+          Zufallsversuche:
+          <input type="number" id="tries" min="50" max="5000" step="50" value="800">
+        </label>
+
+        <div class="row">
+          <button class="primary" id="optimizeBtn">Optimieren</button>
+          <button id="clearBtn">Leeren</button>
+          <button id="downloadBtn">PNG speichern</button>
+        </div>
+      </div>
+
+      <div class="stat" id="stats">
+        Noch keine Optimierung durchgeführt.
+      </div>
+
+      <div class="legend">
+        <span><span class="sw" style="background:#3b82f6"></span>2×1</span>
+        <span><span class="sw" style="background:#f59e0b"></span>2×2</span>
+        <span><span class="sw" style="background:#22c55e"></span>3×2</span>
+      </div>
     </div>
-    <div class="row">
-      <button class="primary" id="solve">Beste Anordnung finden</button>
-      <button class="secondary" id="mirrorX">X spiegeln</button>
-      <button class="secondary" id="mirrorY">Y spiegeln</button>
-      <button class="warn" id="clear">Leeren</button>
+
+    <div class="card">
+      <canvas id="canvas" width="1000" height="700"></canvas>
     </div>
-    <div class="statgrid">
-      <div class="stat"><b id="fillPct">0%</b><span>Flächennutzung</span></div>
-      <div class="stat"><b id="pieces">0</b><span>Steine</span></div>
-      <div class="stat"><b id="sym">0</b><span>Asymmetrie-Score</span></div>
-      <div class="stat"><b id="stab">0</b><span>Stabilitäts-Score</span></div>
-    </div>
-    <div class="metric"><div class="top"><span>Gesamtbewertung</span><b id="scoreText">0</b></div><div class="bar"><i id="scoreBar"></i></div></div>
-    <div class="hint">Die Optimierung bevorzugt volle Fläche, versetzte Stoßfugen, zusammenhängende Packung und deutliche Unterschiede zur Spiegelung auf X- und Y-Achse. Die zweite Lage entsteht per Spiegelung und soll dadurch Fugen überdecken.</div>
-    <div class="log" id="log">Bereit.</div>
-  </section>
-  <section class="boards">
-    <div class="card"><div class="boardTitle"><h2>Grundlage: asymmetrisch</h2><span class="score" id="score1">Score 0</span></div><div id="grid1" class="grid"></div><div class="legend"><span><i class="chip a"></i>2×1</span><span><i class="chip b"></i>2×2</span><span><i class="chip c"></i>3×2</span></div></div>
-    <div class="card"><div class="boardTitle"><h2>Gegenlage: gespiegelt</h2><span class="score" id="score2">für Lage 2</span></div><div id="grid2" class="grid"></div><p class="small" style="margin-top:10px">Nutze X oder Y-Spiegelung, um die Fugen der nächsten Lage gezielt gegenläufig zu legen.</p></div>
-  </section>
-</main>
+  </div>
+</div>
+
 <script>
-(() => {
-  const W=22,H=14,N=W*H;
-  const shapeDefs={A:{name:'2×1', color:'a', sizes:[[2,1],[1,2]], area:2}, B:{name:'2×2', color:'b', sizes:[[2,2]], area:4}, C:{name:'3×2', color:'c', sizes:[[3,2],[2,3]], area:6}};
-  const $=id=>document.getElementById(id);
-  let best=[], mirrorMode='x';
-  function rng(seed){let s=seed>>>0;return()=>((s=(1664525*s+1013904223)>>>0)/4294967296)}
-  function emptyGrid(){return Array.from({length:H},()=>Array(W).fill(null));}
-  function clone(g){return g.map(r=>r.slice());}
-  function enabled(){return ['A','B','C'].filter(k=>$('use'+k).checked)}
-  function canPlace(g,x,y,w,h){if(x+w>W||y+h>H)return false;for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++)if(g[yy][xx])return false;return true}
-  function place(g,x,y,w,h,t,id){for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++)g[yy][xx]={t,id,w,h,x,y};}
-  function shuffled(a,r){a=a.slice();for(let i=a.length-1;i>0;i--){let j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-  function generate(seed, active){const r=rng(seed); const g=emptyGrid(); let id=1; const cells=[]; for(let y=0;y<H;y++)for(let x=0;x<W;x++)cells.push([x,y]);
-    const bias = r()<.5 ? 'diag' : 'bands';
-    const ordered=shuffled(cells,r).sort((p,q)=> bias==='diag' ? (p[0]+p[1]*1.7+r()*3)-(q[0]+q[1]*1.7+r()*3) : (p[1]%3-q[1]%3)||r()-.5);
-    for(const [x,y] of ordered){ if(g[y][x]) continue; const types=shuffled(active,r).sort((a,b)=>shapeDefs[b].area-shapeDefs[a].area + (r()-.5)*2);
-      let done=false; for(const t of types){ const sizes=shuffled(shapeDefs[t].sizes,r); for(const [w,h] of sizes){ if(canPlace(g,x,y,w,h)){place(g,x,y,w,h,t,id++); done=true; break;} } if(done)break; }
+let GRID_H = 14;
+let GRID_W = 22;
+
+const CELL = 32;
+const PADDING = 20;
+
+const SHAPES = [
+  {
+    id: 'A',
+    name: '2×1',
+    color: '#3b82f6',
+    base: [2, 1]
+  },
+  {
+    id: 'B',
+    name: '2×2',
+    color: '#f59e0b',
+    base: [2, 2]
+  },
+  {
+    id: 'C',
+    name: '3×2',
+    color: '#22c55e',
+    base: [3, 2]
+  }
+];
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let bestSolution = null;
+
+function getEnabledShapes() {
+  const enabled = [];
+
+  if (document.getElementById('shapeA').checked) {
+    enabled.push(SHAPES[0]);
+  }
+  if (document.getElementById('shapeB').checked) {
+    enabled.push(SHAPES[1]);
+  }
+  if (document.getElementById('shapeC').checked) {
+    enabled.push(SHAPES[2]);
+  }
+
+  return enabled;
+}
+
+function getOrientations(shape) {
+  const [w, h] = shape.base;
+
+  if (w === h) {
+    return [[w, h]];
+  }
+
+  return [
+    [w, h],
+    [h, w]
+  ];
+}
+
+function createGrid() {
+  return Array.from({ length: GRID_H }, () =>
+    Array(GRID_W).fill(null)
+  );
+}
+
+function canPlace(grid, x, y, w, h) {
+  if (x + w > GRID_W || y + h > GRID_H) {
+    return false;
+  }
+
+  for (let yy = y; yy < y + h; yy++) {
+    for (let xx = x; xx < x + w; xx++) {
+      if (grid[yy][xx] !== null) {
+        return false;
+      }
     }
-    // second pass fills holes with smaller stones
-    for(let y=0;y<H;y++)for(let x=0;x<W;x++) if(!g[y][x]) for(const t of shuffled(active,r).sort((a,b)=>shapeDefs[a].area-shapeDefs[b].area)){ for(const [w,h] of shuffled(shapeDefs[t].sizes,r)){ if(canPlace(g,x,y,w,h)){place(g,x,y,w,h,t,id++); x=-1; break;} } if(x<0)break; }
-    return g;
   }
-  function score(g){let filled=0,pieces=new Set(), vSeams=0,hSeams=0,longV=0,longH=0, contacts=0, symX=0,symY=0, holes=0;
-    for(let y=0;y<H;y++)for(let x=0;x<W;x++){const c=g[y][x]; if(c){filled++;pieces.add(c.id); if(x<W-1&&g[y][x+1]&&g[y][x+1].id!==c.id)contacts++; if(y<H-1&&g[y+1][x]&&g[y+1][x].id!==c.id)contacts++;} else holes++;}
-    for(let x=1;x<W;x++){let run=0;for(let y=0;y<H;y++){let seam=g[y][x-1]&&g[y][x]&&g[y][x-1].id!==g[y][x].id;if(seam){vSeams++;run++;}else{if(run>=4)longV+=run*run;run=0}}if(run>=4)longV+=run*run;}
-    for(let y=1;y<H;y++){let run=0;for(let x=0;x<W;x++){let seam=g[y-1][x]&&g[y][x]&&g[y-1][x].id!==g[y][x].id;if(seam){hSeams++;run++;}else{if(run>=4)longH+=run*run;run=0}}if(run>=4)longH+=run*run;}
-    for(let y=0;y<H;y++)for(let x=0;x<W;x++){let a=g[y][x]?.t||'.', bx=g[H-1-y][x]?.t||'.', by=g[y][W-1-x]?.t||'.'; if(a!==bx)symX++; if(a!==by)symY++;}
-    const fill=filled/N, asym=Math.min(symX,symY)/N, seamBalance=1-Math.abs(vSeams-hSeams)/(vSeams+hSeams+1), stability=Math.max(0,1000 + contacts*2 + seamBalance*180 - longV*1.2 - longH*1.2 - holes*8);
-    const total=Math.round(fill*5200 + asym*1400 + stability - pieces.size*1.5);
-    return {filled,fill,pieces:pieces.size,symX,symY,asym:Math.round(asym*100),stability:Math.round(stability),total,longV,longH,contacts,holes};
+
+  return true;
+}
+
+function place(grid, x, y, w, h, shape) {
+  const id = Math.random().toString(36).slice(2, 9);
+
+  for (let yy = y; yy < y + h; yy++) {
+    for (let xx = x; xx < x + w; xx++) {
+      grid[yy][xx] = {
+        id,
+        shape: shape.id,
+        color: shape.color
+      };
+    }
   }
-  function render(g,id){const root=$(id);root.innerHTML='';for(let y=0;y<H;y++)for(let x=0;x<W;x++){const c=g[y][x];const d=document.createElement('div');d.className='cell '+(c?shapeDefs[c.t].color+' fill':'empty');d.dataset.id=c?c.id:'';root.appendChild(d)}}
-  function mirror(g,mode){const out=emptyGrid();for(let y=0;y<H;y++)for(let x=0;x<W;x++){let sx=mode==='y'?W-1-x:x, sy=mode==='x'?H-1-y:y; out[y][x]=g[sy][sx]?{...g[sy][sx]}:null;}return out}
-  function update(){render(best,'grid1');render(mirror(best,mirrorMode),'grid2');const s=score(best);$('fillPct').textContent=Math.round(s.fill*1000)/10+'%';$('pieces').textContent=s.pieces;$('sym').textContent=s.asym;$('stab').textContent=s.stability;$('scoreText').textContent=s.total;$('score1').textContent='Score '+s.total;$('scoreBar').style.width=Math.max(0,Math.min(100,s.total/70))+'%';}
-  function solve(){const active=enabled(); if(!active.length){$('log').textContent='Bitte mindestens eine Form aktivieren.';return} const runs=+$('runs').value||1000; const baseSeed=+$('seed').value||1; let bestS={total:-1}; $('solve').disabled=true; let lines=[];
-    for(let i=0;i<runs;i++){const g=generate(baseSeed+i*7919,active); const s=score(g); if(s.total>bestS.total){best=g;bestS=s;if(lines.length<12||i%50===0)lines.unshift(`Lauf ${i+1}: Score ${s.total}, Füllung ${Math.round(s.fill*1000)/10}%, asym ${s.asym}, Stabilität ${s.stability}`)}}
-    $('log').textContent=lines.slice(0,18).join('\n')+`\n\nBeste Lösung: ${bestS.pieces} Steine, ${bestS.holes} freie Felder, lange Vertikalfugen ${Math.round(bestS.longV)}, lange Horizontalfugen ${Math.round(bestS.longH)}.`; update(); $('solve').disabled=false;
+
+  return {
+    id,
+    x,
+    y,
+    w,
+    h,
+    shape: shape.id,
+    color: shape.color,
+    area: w * h
+  };
+}
+
+function randomFill() {
+  const enabledShapes = getEnabledShapes();
+
+  if (enabledShapes.length === 0) {
+    return null;
   }
-  $('solve').onclick=solve; $('mirrorX').onclick=()=>{mirrorMode='x';$('score2').textContent='X-Spiegelung';update()}; $('mirrorY').onclick=()=>{mirrorMode='y';$('score2').textContent='Y-Spiegelung';update()}; $('clear').onclick=()=>{best=emptyGrid();$('log').textContent='Geleert.';update()}; ['useA','useB','useC','runs','seed'].forEach(id=>$(id).addEventListener('change',()=>{}));
-  best=emptyGrid(); solve();
-})();
+
+  const grid = createGrid();
+  const placements = [];
+
+  const cells = [];
+  for (let y = 0; y < GRID_H; y++) {
+    for (let x = 0; x < GRID_W; x++) {
+      cells.push([x, y]);
+    }
+  }
+
+  shuffle(cells);
+
+  for (const [x, y] of cells) {
+    if (grid[y][x] !== null) {
+      continue;
+    }
+
+    const candidates = [];
+
+    for (const shape of enabledShapes) {
+      for (const [w, h] of getOrientations(shape)) {
+        if (canPlace(grid, x, y, w, h)) {
+          candidates.push({ shape, w, h });
+        }
+      }
+    }
+
+    if (candidates.length === 0) {
+      continue;
+    }
+
+    // Größere Steine leicht bevorzugen
+    candidates.sort((a, b) => (b.w * b.h) - (a.w * a.h));
+
+    // Mit etwas Zufall aus den besten Kandidaten wählen
+    const top = candidates.slice(0, Math.min(3, candidates.length));
+    const chosen = top[Math.floor(Math.random() * top.length)];
+
+    placements.push(
+      place(grid, x, y, chosen.w, chosen.h, chosen.shape)
+    );
+  }
+
+  return {
+    grid,
+    placements
+  };
+}
+
+function evaluate(solution) {
+  if (!solution) {
+    return -Infinity;
+  }
+
+  const { grid, placements } = solution;
+  const totalCells = GRID_W * GRID_H;
+  let filled = 0;
+
+  for (let y = 0; y < GRID_H; y++) {
+    for (let x = 0; x < GRID_W; x++) {
+      if (grid[y][x] !== null) {
+        filled++;
+      }
+    }
+  }
+
+  const fillRatio = filled / totalCells;
+
+  // Asymmetrie gegenüber vertikaler und horizontaler Spiegelung
+  let asymX = 0;
+  let asymY = 0;
+
+  for (let y = 0; y < GRID_H; y++) {
+    for (let x = 0; x < GRID_W; x++) {
+      const occupied = grid[y][x] !== null ? 1 : 0;
+
+      const mirrorX = grid[y][GRID_W - 1 - x] !== null ? 1 : 0;
+      const mirrorY = grid[GRID_H - 1 - y][x] !== null ? 1 : 0;
+
+      if (occupied !== mirrorX) asymX++;
+      if (occupied !== mirrorY) asymY++;
+    }
+  }
+
+  const asymmetryScore = (asymX + asymY) / (2 * totalCells);
+
+  // Stabilität: belohne viele vertikale Kontakte
+  let support = 0;
+  for (let y = 1; y < GRID_H; y++) {
+    for (let x = 0; x < GRID_W; x++) {
+      if (grid[y][x] && grid[y - 1][x]) {
+        support++;
+      }
+    }
+  }
+
+  // Fugenstrafe: lange horizontale und vertikale Linien
+  let seams = 0;
+
+  for (let y = 0; y < GRID_H; y++) {
+    let run = 0;
+    for (let x = 0; x < GRID_W; x++) {
+      if (grid[y][x] === null) {
+        run++;
+      } else {
+        if (run > 2) seams += run;
+        run = 0;
+      }
+    }
+    if (run > 2) seams += run;
+  }
+
+  const pieceCount = placements.length;
+
+  const score =
+    fillRatio * 10000 +
+    asymmetryScore * 800 +
+    support * 2 -
+    seams * 3 +
+    pieceCount * 0.1;
+
+  return score;
+}
+
+function optimize() {
+  const tries = parseInt(
+    document.getElementById('tries').value || '800',
+    10
+  );
+
+  let best = null;
+  let bestScore = -Infinity;
+
+  for (let i = 0; i < tries; i++) {
+    const solution = randomFill();
+    const score = evaluate(solution);
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = solution;
+    }
+  }
+
+  bestSolution = best;
+  draw();
+  updateStats(best, bestScore);
+}
+
+function updateStats(solution, score) {
+  const stats = document.getElementById('stats');
+
+  if (!solution) {
+    stats.textContent = 'Keine gültige Lösung.';
+    return;
+  }
+
+  const total = GRID_W * GRID_H;
+  const filled = solution.placements.reduce(
+    (sum, p) => sum + p.area,
+    0
+  );
+
+  const counts = {};
+  for (const p of solution.placements) {
+    counts[p.shape] = (counts[p.shape] || 0) + 1;
+  }
+
+  stats.innerHTML = `
+    <strong>Score:</strong> ${score.toFixed(1)}<br>
+    <strong>Raster:</strong> ${GRID_W} × ${GRID_H}<br>
+    <strong>Belegte Zellen:</strong> ${filled} / ${total}
+    (${(filled / total * 100).toFixed(2)}%)<br>
+    <strong>Anzahl Steine:</strong> ${solution.placements.length}<br>
+    <strong>2×1:</strong> ${counts.A || 0},
+    <strong>2×2:</strong> ${counts.B || 0},
+    <strong>3×2:</strong> ${counts.C || 0}
+  `;
+}
+
+function draw() {
+  const width = GRID_W * CELL + PADDING * 2;
+  const height = GRID_H * CELL + PADDING * 2;
+
+  canvas.width = width;
+  canvas.height = height;
+
+  ctx.clearRect(0, 0, width, height);
+
+  // Hintergrund
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+
+  // Rasterlinien
+  ctx.strokeStyle = '#d1d5db';
+  ctx.lineWidth = 1;
+
+  for (let x = 0; x <= GRID_W; x++) {
+    ctx.beginPath();
+    ctx.moveTo(PADDING + x * CELL, PADDING);
+    ctx.lineTo(PADDING + x * CELL, PADDING + GRID_H * CELL);
+    ctx.stroke();
+  }
+
+  for (let y = 0; y <= GRID_H; y++) {
+    ctx.beginPath();
+    ctx.moveTo(PADDING, PADDING + y * CELL);
+    ctx.lineTo(PADDING + GRID_W * CELL, PADDING + y * CELL);
+    ctx.stroke();
+  }
+
+  if (!bestSolution) {
+    return;
+  }
+
+  // Steine zeichnen
+  for (const p of bestSolution.placements) {
+    const px = PADDING + p.x * CELL;
+    const py = PADDING + p.y * CELL;
+
+    ctx.fillStyle = p.color;
+    ctx.fillRect(
+      px + 1,
+      py + 1,
+      p.w * CELL - 2,
+      p.h * CELL - 2
+    );
+
+    ctx.strokeStyle = '#111827';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(
+      px + 1,
+      py + 1,
+      p.w * CELL - 2,
+      p.h * CELL - 2
+    );
+  }
+
+  // Mittelachsen markieren
+  ctx.save();
+  ctx.strokeStyle = 'rgba(239,68,68,0.6)';
+  ctx.setLineDash([6, 6]);
+
+  // Vertikale Achse
+  ctx.beginPath();
+  ctx.moveTo(PADDING + GRID_W * CELL / 2, PADDING);
+  ctx.lineTo(PADDING + GRID_W * CELL / 2, PADDING + GRID_H * CELL);
+  ctx.stroke();
+
+  // Horizontale Achse
+  ctx.beginPath();
+  ctx.moveTo(PADDING, PADDING + GRID_H * CELL / 2);
+  ctx.lineTo(PADDING + GRID_W * CELL, PADDING + GRID_H * CELL / 2);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function clearAll() {
+  bestSolution = null;
+  draw();
+  document.getElementById('stats').textContent =
+    'Raster geleert.';
+}
+
+function downloadPNG() {
+  const link = document.createElement('a');
+  link.download = 'paletten-stapel.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+document.getElementById('applyGrid').addEventListener('click', () => {
+  const newW = Math.max(
+    1,
+    Math.min(
+      100,
+      parseInt(document.getElementById('gridW').value || '22', 10)
+    )
+  );
+
+  const newH = Math.max(
+    1,
+    Math.min(
+      100,
+      parseInt(document.getElementById('gridH').value || '14', 10)
+    )
+  );
+
+  GRID_W = newW;
+  GRID_H = newH;
+
+  bestSolution = null;
+  draw();
+
+  document.getElementById('stats').textContent =
+    `Raster auf ${GRID_W} × ${GRID_H} gesetzt.`;
+});
+
+document
+  .getElementById('optimizeBtn')
+  .addEventListener('click', optimize);
+
+document
+  .getElementById('clearBtn')
+  .addEventListener('click', clearAll);
+
+document
+  .getElementById('downloadBtn')
+  .addEventListener('click', downloadPNG);
+
+// Initiales leeres Raster
+draw();
 </script>
 </body>
 </html>
