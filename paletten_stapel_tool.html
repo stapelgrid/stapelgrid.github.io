@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Paletten-Stapel-Optimierer 14×22</title>
+<style>
+  :root{--bg:#0f172a;--panel:#111827;--ink:#e5e7eb;--muted:#9ca3af;--grid:#334155;--good:#22c55e;--warn:#f59e0b;--bad:#ef4444;--a:#38bdf8;--b:#a78bfa;--c:#fb7185;}
+  *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(135deg,#0f172a,#111827 45%,#020617);color:var(--ink)}
+  header{padding:22px clamp(16px,4vw,44px);border-bottom:1px solid #263244;background:rgba(2,6,23,.45);backdrop-filter:blur(8px)}
+  h1{margin:0 0 6px;font-size:clamp(22px,3vw,34px)} p{margin:0;color:var(--muted);line-height:1.45}.wrap{display:grid;grid-template-columns:380px 1fr;gap:18px;padding:18px clamp(12px,3vw,32px)}
+  @media(max-width:980px){.wrap{grid-template-columns:1fr}.boards{grid-template-columns:1fr!important}}
+  .card{background:rgba(17,24,39,.82);border:1px solid #263244;border-radius:18px;padding:16px;box-shadow:0 16px 50px rgba(0,0,0,.25)}
+  .controls{display:grid;gap:14px;align-content:start}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.shape{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:10px;border:1px solid #334155;border-radius:12px;background:#0b1220}.chip{width:22px;height:22px;border-radius:6px}.chip.a{background:var(--a)}.chip.b{background:var(--b)}.chip.c{background:var(--c)}
+  label{color:#d1d5db;font-weight:650}.small{font-size:12px;color:var(--muted)} input[type=number],select{background:#020617;color:var(--ink);border:1px solid #334155;border-radius:10px;padding:8px 10px;width:92px}input[type=checkbox]{width:18px;height:18px;accent-color:#22c55e}
+  button{border:0;border-radius:12px;padding:10px 13px;font-weight:800;cursor:pointer;color:#07111f;background:#e5e7eb}button.primary{background:#22c55e}button.secondary{background:#38bdf8}button.warn{background:#f59e0b}button:disabled{opacity:.55;cursor:not-allowed}.statgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.stat{padding:10px;border:1px solid #334155;border-radius:12px;background:#07101d}.stat b{display:block;font-size:22px}.stat span{font-size:12px;color:var(--muted)}
+  .boards{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}.boardTitle{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:10px}.boardTitle h2{font-size:18px;margin:0}.score{font-variant-numeric:tabular-nums;color:#bbf7d0}.grid{display:grid;grid-template-columns:repeat(22,1fr);gap:2px;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:6px;max-width:100%;aspect-ratio:22/14}.cell{position:relative;border-radius:4px;background:#020617;min-width:8px}.cell.fill{box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}.cell.a{background:var(--a)}.cell.b{background:var(--b)}.cell.c{background:var(--c)}.cell::after{content:attr(data-id);position:absolute;inset:0;display:grid;place-items:center;font-size:9px;color:rgba(0,0,0,.75);font-weight:900}.cell.empty::after{content:''}.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}.legend span{display:inline-flex;gap:6px;align-items:center;color:var(--muted);font-size:13px}.bar{height:10px;border-radius:999px;background:#1f2937;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e);width:0%}.log{max-height:170px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#cbd5e1;background:#020617;border:1px solid #334155;border-radius:12px;padding:10px;white-space:pre-wrap}.hint{border-left:4px solid #38bdf8;padding:10px 12px;background:#07101d;border-radius:10px;color:#cbd5e1}.metric{display:grid;gap:7px}.metric .top{display:flex;justify-content:space-between;color:#d1d5db;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Paletten-Stapel-Optimierer 14×22</h1>
+  <p>Ein HTML-Webtool für 2×1, 2×2 und 3×2 Formen mit Rotation, asymmetrischer Grundlage und gespiegelter Gegenlage.</p>
+</header>
+<main class="wrap">
+  <section class="controls card">
+    <h2 style="margin:0">Einstellungen</h2>
+    <div class="shape"><span class="chip a"></span><label><input id="useA" type="checkbox" checked> Form A: 2×1</label><span class="small">rotierbar</span></div>
+    <div class="shape"><span class="chip b"></span><label><input id="useB" type="checkbox" checked> Form B: 2×2</label><span class="small">rotierbar</span></div>
+    <div class="shape"><span class="chip c"></span><label><input id="useC" type="checkbox" checked> Form C: 3×2</label><span class="small">2×3 / 3×2</span></div>
+    <div class="row">
+      <label for="runs">Suchläufe</label><input id="runs" type="number" min="50" max="20000" value="1800" step="50">
+      <label for="seed">Seed</label><input id="seed" type="number" value="42">
+    </div>
+    <div class="row">
+      <button class="primary" id="solve">Beste Anordnung finden</button>
+      <button class="secondary" id="mirrorX">X spiegeln</button>
+      <button class="secondary" id="mirrorY">Y spiegeln</button>
+      <button class="warn" id="clear">Leeren</button>
+    </div>
+    <div class="statgrid">
+      <div class="stat"><b id="fillPct">0%</b><span>Flächennutzung</span></div>
+      <div class="stat"><b id="pieces">0</b><span>Steine</span></div>
+      <div class="stat"><b id="sym">0</b><span>Asymmetrie-Score</span></div>
+      <div class="stat"><b id="stab">0</b><span>Stabilitäts-Score</span></div>
+    </div>
+    <div class="metric"><div class="top"><span>Gesamtbewertung</span><b id="scoreText">0</b></div><div class="bar"><i id="scoreBar"></i></div></div>
+    <div class="hint">Die Optimierung bevorzugt volle Fläche, versetzte Stoßfugen, zusammenhängende Packung und deutliche Unterschiede zur Spiegelung auf X- und Y-Achse. Die zweite Lage entsteht per Spiegelung und soll dadurch Fugen überdecken.</div>
+    <div class="log" id="log">Bereit.</div>
+  </section>
+  <section class="boards">
+    <div class="card"><div class="boardTitle"><h2>Grundlage: asymmetrisch</h2><span class="score" id="score1">Score 0</span></div><div id="grid1" class="grid"></div><div class="legend"><span><i class="chip a"></i>2×1</span><span><i class="chip b"></i>2×2</span><span><i class="chip c"></i>3×2</span></div></div>
+    <div class="card"><div class="boardTitle"><h2>Gegenlage: gespiegelt</h2><span class="score" id="score2">für Lage 2</span></div><div id="grid2" class="grid"></div><p class="small" style="margin-top:10px">Nutze X oder Y-Spiegelung, um die Fugen der nächsten Lage gezielt gegenläufig zu legen.</p></div>
+  </section>
+</main>
+<script>
+(() => {
+  const W=22,H=14,N=W*H;
+  const shapeDefs={A:{name:'2×1', color:'a', sizes:[[2,1],[1,2]], area:2}, B:{name:'2×2', color:'b', sizes:[[2,2]], area:4}, C:{name:'3×2', color:'c', sizes:[[3,2],[2,3]], area:6}};
+  const $=id=>document.getElementById(id);
+  let best=[], mirrorMode='x';
+  function rng(seed){let s=seed>>>0;return()=>((s=(1664525*s+1013904223)>>>0)/4294967296)}
+  function emptyGrid(){return Array.from({length:H},()=>Array(W).fill(null));}
+  function clone(g){return g.map(r=>r.slice());}
+  function enabled(){return ['A','B','C'].filter(k=>$('use'+k).checked)}
+  function canPlace(g,x,y,w,h){if(x+w>W||y+h>H)return false;for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++)if(g[yy][xx])return false;return true}
+  function place(g,x,y,w,h,t,id){for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++)g[yy][xx]={t,id,w,h,x,y};}
+  function shuffled(a,r){a=a.slice();for(let i=a.length-1;i>0;i--){let j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+  function generate(seed, active){const r=rng(seed); const g=emptyGrid(); let id=1; const cells=[]; for(let y=0;y<H;y++)for(let x=0;x<W;x++)cells.push([x,y]);
+    const bias = r()<.5 ? 'diag' : 'bands';
+    const ordered=shuffled(cells,r).sort((p,q)=> bias==='diag' ? (p[0]+p[1]*1.7+r()*3)-(q[0]+q[1]*1.7+r()*3) : (p[1]%3-q[1]%3)||r()-.5);
+    for(const [x,y] of ordered){ if(g[y][x]) continue; const types=shuffled(active,r).sort((a,b)=>shapeDefs[b].area-shapeDefs[a].area + (r()-.5)*2);
+      let done=false; for(const t of types){ const sizes=shuffled(shapeDefs[t].sizes,r); for(const [w,h] of sizes){ if(canPlace(g,x,y,w,h)){place(g,x,y,w,h,t,id++); done=true; break;} } if(done)break; }
+    }
+    // second pass fills holes with smaller stones
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++) if(!g[y][x]) for(const t of shuffled(active,r).sort((a,b)=>shapeDefs[a].area-shapeDefs[b].area)){ for(const [w,h] of shuffled(shapeDefs[t].sizes,r)){ if(canPlace(g,x,y,w,h)){place(g,x,y,w,h,t,id++); x=-1; break;} } if(x<0)break; }
+    return g;
+  }
+  function score(g){let filled=0,pieces=new Set(), vSeams=0,hSeams=0,longV=0,longH=0, contacts=0, symX=0,symY=0, holes=0;
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++){const c=g[y][x]; if(c){filled++;pieces.add(c.id); if(x<W-1&&g[y][x+1]&&g[y][x+1].id!==c.id)contacts++; if(y<H-1&&g[y+1][x]&&g[y+1][x].id!==c.id)contacts++;} else holes++;}
+    for(let x=1;x<W;x++){let run=0;for(let y=0;y<H;y++){let seam=g[y][x-1]&&g[y][x]&&g[y][x-1].id!==g[y][x].id;if(seam){vSeams++;run++;}else{if(run>=4)longV+=run*run;run=0}}if(run>=4)longV+=run*run;}
+    for(let y=1;y<H;y++){let run=0;for(let x=0;x<W;x++){let seam=g[y-1][x]&&g[y][x]&&g[y-1][x].id!==g[y][x].id;if(seam){hSeams++;run++;}else{if(run>=4)longH+=run*run;run=0}}if(run>=4)longH+=run*run;}
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++){let a=g[y][x]?.t||'.', bx=g[H-1-y][x]?.t||'.', by=g[y][W-1-x]?.t||'.'; if(a!==bx)symX++; if(a!==by)symY++;}
+    const fill=filled/N, asym=Math.min(symX,symY)/N, seamBalance=1-Math.abs(vSeams-hSeams)/(vSeams+hSeams+1), stability=Math.max(0,1000 + contacts*2 + seamBalance*180 - longV*1.2 - longH*1.2 - holes*8);
+    const total=Math.round(fill*5200 + asym*1400 + stability - pieces.size*1.5);
+    return {filled,fill,pieces:pieces.size,symX,symY,asym:Math.round(asym*100),stability:Math.round(stability),total,longV,longH,contacts,holes};
+  }
+  function render(g,id){const root=$(id);root.innerHTML='';for(let y=0;y<H;y++)for(let x=0;x<W;x++){const c=g[y][x];const d=document.createElement('div');d.className='cell '+(c?shapeDefs[c.t].color+' fill':'empty');d.dataset.id=c?c.id:'';root.appendChild(d)}}
+  function mirror(g,mode){const out=emptyGrid();for(let y=0;y<H;y++)for(let x=0;x<W;x++){let sx=mode==='y'?W-1-x:x, sy=mode==='x'?H-1-y:y; out[y][x]=g[sy][sx]?{...g[sy][sx]}:null;}return out}
+  function update(){render(best,'grid1');render(mirror(best,mirrorMode),'grid2');const s=score(best);$('fillPct').textContent=Math.round(s.fill*1000)/10+'%';$('pieces').textContent=s.pieces;$('sym').textContent=s.asym;$('stab').textContent=s.stability;$('scoreText').textContent=s.total;$('score1').textContent='Score '+s.total;$('scoreBar').style.width=Math.max(0,Math.min(100,s.total/70))+'%';}
+  function solve(){const active=enabled(); if(!active.length){$('log').textContent='Bitte mindestens eine Form aktivieren.';return} const runs=+$('runs').value||1000; const baseSeed=+$('seed').value||1; let bestS={total:-1}; $('solve').disabled=true; let lines=[];
+    for(let i=0;i<runs;i++){const g=generate(baseSeed+i*7919,active); const s=score(g); if(s.total>bestS.total){best=g;bestS=s;if(lines.length<12||i%50===0)lines.unshift(`Lauf ${i+1}: Score ${s.total}, Füllung ${Math.round(s.fill*1000)/10}%, asym ${s.asym}, Stabilität ${s.stability}`)}}
+    $('log').textContent=lines.slice(0,18).join('\n')+`\n\nBeste Lösung: ${bestS.pieces} Steine, ${bestS.holes} freie Felder, lange Vertikalfugen ${Math.round(bestS.longV)}, lange Horizontalfugen ${Math.round(bestS.longH)}.`; update(); $('solve').disabled=false;
+  }
+  $('solve').onclick=solve; $('mirrorX').onclick=()=>{mirrorMode='x';$('score2').textContent='X-Spiegelung';update()}; $('mirrorY').onclick=()=>{mirrorMode='y';$('score2').textContent='Y-Spiegelung';update()}; $('clear').onclick=()=>{best=emptyGrid();$('log').textContent='Geleert.';update()}; ['useA','useB','useC','runs','seed'].forEach(id=>$(id).addEventListener('change',()=>{}));
+  best=emptyGrid(); solve();
+})();
+</script>
+</body>
+</html>
